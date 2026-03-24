@@ -1,2 +1,13 @@
-# Example
-An example greeter plugin
+# Imbued heartache
+A plugin to check your imbued heart rate, and superior creature kc.
+
+"!heart" -> gives you the rate without elite ca's.
+
+"!heart elite" -> gives you the rate with elite ca's.
+
+# Example 
+Heartache: 2.4 x, with 683 superiors killed
+
+This means you are 2.4 times the drop rate for an imbued heart, and have killed 683 superior creatures.
+
+The rates are taken from the osrs wiki. 
