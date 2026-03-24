@@ -1,6 +1,10 @@
 # Imbued heartache
 A plugin to check your imbued heart rate, and superior creature kc.
 
+# Sync
+To sync your slayer creatures kill count, please open your slayer log.
+
+# Commands
 "!heart" -> gives you the rate without elite ca's.
 
 "!heart elite" -> gives you the rate with elite ca's.
