@@ -5,16 +5,15 @@ import imbuedHeartache.service.SlayerKillCountService;
 import javax.inject.Inject;
 
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
-import net.runelite.api.events.ChatMessage;
+import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.WidgetLoaded;
-import net.runelite.client.chat.ChatCommandManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Objects;
 
 @Slf4j
 @PluginDescriptor(
@@ -24,14 +23,10 @@ public class ImbuedHeartachePlugin extends Plugin {
     @Inject
     private Client client;
 
-    @Inject
-    private ChatCommandManager chatCommandManager;
-
     private @Inject SlayerKillCountService slayerKillCountService;
 
     @Override
     protected void startUp() throws Exception {
-        chatCommandManager.registerCommand("!heart", this::handlePossibleHeartacheMessage);
         log.debug("Imbued heartache started!");
     }
 
@@ -45,38 +40,15 @@ public class ImbuedHeartachePlugin extends Plugin {
         slayerKillCountService.onWidget(event);
     }
 
-    private void handlePossibleHeartacheMessage(ChatMessage message, String query) {
-        if (query.isBlank()) {
-            return;
-        }
-        String otherPlayerName = getStringBetweenQuotes(query);
-        if (otherPlayerName != null) {
-            query = query.replace("\"" + otherPlayerName + "\"", "").trim();
-        }
-        String heart = query;
+    @Subscribe
+    public void onCommandExecuted(CommandExecuted commandExecuted) {
         boolean elite = false;
-        if (query.split(" ").length > 1) {
-            heart = query.split(" ")[0];
-            elite = query.split(" ")[1].equalsIgnoreCase("elite");
-        }
-        if ("!heart".equalsIgnoreCase(heart)) {
+        if ("heart".equalsIgnoreCase(commandExecuted.getCommand())) {
+            if (Objects.nonNull(commandExecuted.getArguments()) && commandExecuted.getArguments().length > 0) {
+                elite = "elite".equalsIgnoreCase(commandExecuted.getArguments()[0]);
+            }
             String heartAcheAndKC = slayerKillCountService.getHeartacheAndKC(elite);
-            updateChatMessage(message, heartAcheAndKC);
+            client.addChatMessage(ChatMessageType.PLAYERRELATED, "Imbued heartache plugin", heartAcheAndKC, "Imbued heartache");
         }
     }
-
-    public String getStringBetweenQuotes(String commandArg) {
-        Pattern pattern = Pattern.compile("\"([^\"]*)\"");
-        Matcher matcher = pattern.matcher(commandArg);
-        if (matcher.find()) {
-            return matcher.group(1);
-        }
-        return null;
-    }
-
-    private void updateChatMessage(ChatMessage chatMessage, String text) {
-        chatMessage.getMessageNode().setValue(text);
-        client.refreshChat();
-    }
-
 }
