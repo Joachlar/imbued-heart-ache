@@ -6,20 +6,25 @@ import net.runelite.api.events.WidgetLoaded;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.http.api.loottracker.LootRecordType;
+
+import static net.runelite.client.RuneLite.RUNELITE_DIR;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.io.*;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 @Slf4j
 @Singleton
 public class SlayerKillCountService {
+
+    private static final String FILE_EXTENSION = ".log";
+    private static final File LOOT_RECORD_DIR = new File(RUNELITE_DIR, "loots");
+    private final File playerFolder = LOOT_RECORD_DIR;
 
     @Inject
     private ConfigManager configManager;
@@ -33,6 +38,7 @@ public class SlayerKillCountService {
     public void onWidget(WidgetLoaded event) {
         if (event.getGroupId() == InterfaceID.KILL_LOG) {
             clientThread.invokeAtTickEnd(this::handleSlayerLog);
+            clientThread.invokeAtTickEnd(this::handleLootLoggerSlayerMonsters);
         }
     }
 
@@ -91,6 +97,14 @@ public class SlayerKillCountService {
         }
     }
 
+    private void handleLootLoggerSlayerMonsters() {
+        List<String> specifiedMonsters = new ArrayList<>();
+        specifiedMonsters.add("Elder custodian stalker");
+        specifiedMonsters.add("Venator");
+
+        specifiedMonsters.forEach(monster -> setSlayerKc(monster, getKCFromLootLogger(monster)));
+    }
+
     private void setSlayerKc(String mob, int kc) {
         if (kc <= 0) return;
         configManager.setRSProfileConfiguration("imbuedHeartAchePlugin", "kc_" + mob.toLowerCase(), kc);
@@ -132,9 +146,7 @@ public class SlayerKillCountService {
         monsters.put("Cave Horrors", 784);
         monsters.put("Cockatrice", 1192);
         monsters.put("Crawling hands", 1376);
-        //Can't include Custodian stalkers as that would include Elder and regular.
-        //Elder Custodian stalkers are the only ones with superiors.
-        //monsters.put("Custodian stalkers", 504);
+        monsters.put("Elder custodian stalker", 504);
         monsters.put("Dark beasts", 256);
         monsters.put("Drakes", 368);
         monsters.put("Dust devils", 680);
@@ -149,8 +161,40 @@ public class SlayerKillCountService {
         monsters.put("Rockslugs", 1240);
         monsters.put("Smoke devils", 200);
         monsters.put("Turoth", 832);
+        monsters.put("Venator", 536);
         monsters.put("Warped creatures", 816);
         monsters.put("Wyrms", 728);
         return monsters;
+    }
+
+    private static String npcNameToFileName(final String npcName) {
+        return npcName.toLowerCase().trim() + FILE_EXTENSION;
+    }
+
+    // Finds kc from Loot Logger files
+    // See https://github.com/TheStonedTurtle/Loot-Logger
+    private int getKCFromLootLogger(String npcName) {
+        final File userHashFile = new File(playerFolder, String.valueOf(client.getAccountHash()));
+        final File npcFile = new File(userHashFile, LootRecordType.NPC.name());
+        final String npcFileName = npcNameToFileName(npcName);
+        final File file = new File(npcFile, npcFileName);
+        int count = 0;
+
+        try (final BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                // Skips the empty line at end of file
+                if (!line.isEmpty()) {
+                    count++;
+                }
+            }
+
+        } catch (FileNotFoundException e) {
+            log.debug("File not found: {}", npcFileName);
+        } catch (IOException e) {
+            log.warn("IOException for file {}: {}", npcFileName, e.getMessage());
+        }
+
+        return count;
     }
 }

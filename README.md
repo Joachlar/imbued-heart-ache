@@ -4,6 +4,11 @@ A plugin to check your imbued heart rate, and superior creature kc.
 # Sync
 To sync your slayer creatures kill count, please open your slayer log.
 
+# Additional data
+If you want to add Venators and Elder custodian stalkers to your dry streak,
+please have loot logger plugin installed!
+see https://runelite.net/plugin-hub/show/loot-logger
+
 # Commands
 "::heart" -> gives you the rate without elite ca's.
 
