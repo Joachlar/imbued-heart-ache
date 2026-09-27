@@ -23,8 +23,7 @@ import java.util.Objects;
 
 @Slf4j
 @PluginDescriptor(
-        name = "Imbued heartache",
-        internalName = "imbued-heartache"
+        name = "Imbued heartache"
 )
 public class ImbuedHeartachePlugin extends Plugin {
     @Inject
