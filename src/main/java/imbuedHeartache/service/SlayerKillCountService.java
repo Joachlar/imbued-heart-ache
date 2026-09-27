@@ -6,11 +6,7 @@ import net.runelite.api.events.WidgetLoaded;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
-import net.runelite.http.api.loottracker.LootRecordType;
 
-import static net.runelite.client.RuneLite.RUNELITE_DIR;
-
-import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.io.*;
@@ -21,10 +17,6 @@ import java.util.*;
 @Slf4j
 @Singleton
 public class SlayerKillCountService {
-
-    private static final String FILE_EXTENSION = ".log";
-    private static final File LOOT_RECORD_DIR = new File(RUNELITE_DIR, "loots");
-    private final File playerFolder = LOOT_RECORD_DIR;
 
     @Inject
     private ConfigManager configManager;
@@ -38,7 +30,6 @@ public class SlayerKillCountService {
     public void onWidget(WidgetLoaded event) {
         if (event.getGroupId() == InterfaceID.KILL_LOG) {
             clientThread.invokeAtTickEnd(this::handleSlayerLog);
-            clientThread.invokeAtTickEnd(this::handleLootLoggerSlayerMonsters);
         }
     }
 
@@ -93,21 +84,20 @@ public class SlayerKillCountService {
                 }
             }
 
-            setSlayerKc(mob, kc);
+            upsertSlayerKc(mob, kc);
         }
     }
 
-    private void handleLootLoggerSlayerMonsters() {
-        List<String> specifiedMonsters = new ArrayList<>();
-        specifiedMonsters.add("Elder custodian stalker");
-        specifiedMonsters.add("Venator");
-
-        specifiedMonsters.forEach(monster -> setSlayerKc(monster, getKCFromLootLogger(monster)));
-    }
-
-    private void setSlayerKc(String mob, int kc) {
-        if (kc <= 0) return;
-        configManager.setRSProfileConfiguration("imbuedHeartAchePlugin", "kc_" + mob.toLowerCase(), kc);
+    public void upsertSlayerKc(String mob, int kc) {
+        if (kc == 0) return;
+        int kcCount = configManager.getRSProfileConfiguration("imbuedHeartAchePlugin", "kc_" + mob.toLowerCase(), int.class);
+        if (kc < 0 && kcCount > 0) {
+            int savedKc = configManager.getRSProfileConfiguration("imbuedHeartAchePlugin", "kc_" + mob.toLowerCase(), int.class);
+            savedKc++;
+            configManager.setRSProfileConfiguration("imbuedHeartAchePlugin", "kc_" + mob.toLowerCase(), savedKc);
+        } else {
+            configManager.setRSProfileConfiguration("imbuedHeartAchePlugin", "kc_" + mob.toLowerCase(), kc);
+        }
     }
 
     private Integer getSlayerKc(String mob) {
@@ -121,9 +111,9 @@ public class SlayerKillCountService {
         ArrayList<Double> rates = new ArrayList<>();
 
         monsters.forEach((monster, rarity) -> {
+            if (rarity == 0) return;
             Integer amount = getSlayerKc(monster);
-            if (Objects.isNull(amount))
-                return;
+            if (Objects.isNull(amount)) return;
             double calculatedSuperiors = (double) amount / superiorRate;
             rates.add(calculatedSuperiors / rarity);
         });
@@ -131,70 +121,70 @@ public class SlayerKillCountService {
         return rates.stream().reduce(0.0, Double::sum);
     }
 
-    @Nonnull
-    private static Map<String, Integer> getMonstersAndRates() {
+    public Map<String, Integer> getMonstersAndRates() {
         Map<String, Integer> monsters = new HashMap<>();
         monsters.put("Aberrant spectres", 760);
+        monsters.put("Abhorrent spectre", 0);
         monsters.put("Abyssal demons", 352);
+        monsters.put("Greater abyssal demon", 0);
         monsters.put("Aquanites", 472);
+        monsters.put("Elder aquanite", 0);
         monsters.put("Araxytes", 224);
+        monsters.put("Dreadborn Araxyte", 0);
         monsters.put("Banshees", 1288);
+        monsters.put("Screeming banshee", 0);
         monsters.put("Basilisk knights", 760);
+        monsters.put("Basilisk Sentinel", 0);
         monsters.put("Basilisks", 1024);
+        monsters.put("Monstrous basilisk", 0);
         monsters.put("Bloodvelds", 896);
+        monsters.put("Insatiable Bloodveld", 0);
         monsters.put("Cave crawlers", 1336);
+        monsters.put("Chasm Crawler", 0);
         monsters.put("Cave Horrors", 784);
+        monsters.put("Cave abomination", 0);
         monsters.put("Cockatrice", 1192);
+        monsters.put("Cockathrice", 0);
         monsters.put("Crawling hands", 1376);
+        monsters.put("Crushing hands", 0);
         monsters.put("Elder custodian stalker", 504);
+        monsters.put("Ancient stalker", 0);
         monsters.put("Dark beasts", 256);
+        monsters.put("Night beasts", 0);
         monsters.put("Drakes", 368);
+        monsters.put("Guardian Drake", 0);
         monsters.put("Dust devils", 680);
+        monsters.put("Choke devils", 0);
         monsters.put("Gargoyles", 520);
+        monsters.put("Marble gargoyle", 0);
         monsters.put("Gryphons", 888);
+        monsters.put("Dire gryphon", 0);
         monsters.put("Hydras", 160);
-        monsters.put("Infernal mages", 960);
+        monsters.put("Colossal Hydra", 0);
+        monsters.put("Malevolent Mage", 960);
+        monsters.put("Infernal mages", 0);
         monsters.put("Jellies", 872);
+        monsters.put("Vitreous Jelly", 0);
         monsters.put("Kurask", 600);
+        monsters.put("King kurask", 0);
         monsters.put("Nechryael", 440);
+        monsters.put("Nechryarch", 0);
         monsters.put("Pyrefiends", 1144);
+        monsters.put("Flaming pyrelord", 0);
+        monsters.put("Infernal pyrelord", 0);
         monsters.put("Rockslugs", 1240);
+        monsters.put("Giant Rockslug", 0);
         monsters.put("Smoke devils", 200);
+        monsters.put("Nuclear smoke devils", 0);
         monsters.put("Turoth", 832);
+        monsters.put("Spiked Turoth", 0);
         monsters.put("Venator", 536);
+        monsters.put("Blood-starved venator", 0);
         monsters.put("Warped creatures", 816);
+        monsters.put("Mutated Terrorbird", 0);
+        monsters.put("Mutated Tortoise", 0);
         monsters.put("Wyrms", 728);
+        monsters.put("Shadow Wyrm", 0);
         return monsters;
-    }
-
-    private static String npcNameToFileName(final String npcName) {
-        return npcName.toLowerCase().trim() + FILE_EXTENSION;
-    }
-
-    // Finds kc from Loot Logger files
-    // See https://github.com/TheStonedTurtle/Loot-Logger
-    private int getKCFromLootLogger(String npcName) {
-        final File userHashFile = new File(playerFolder, String.valueOf(client.getAccountHash()));
-        final File npcFile = new File(userHashFile, LootRecordType.NPC.name());
-        final String npcFileName = npcNameToFileName(npcName);
-        final File file = new File(npcFile, npcFileName);
-        int count = 0;
-
-        try (final BufferedReader br = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                // Skips the empty line at end of file
-                if (!line.isEmpty()) {
-                    count++;
-                }
-            }
-
-        } catch (FileNotFoundException e) {
-            log.debug("File not found: {}", npcFileName);
-        } catch (IOException e) {
-            log.warn("IOException for file {}: {}", npcFileName, e.getMessage());
-        }
-
-        return count;
     }
 }
